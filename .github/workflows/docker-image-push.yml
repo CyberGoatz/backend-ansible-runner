@@ -18,6 +18,6 @@ jobs:
     uses: CyberGoatz/github-workflows/.github/workflows/acr-build-push.yml@main
     with:
       acr_login_server: ${{ vars.ACR_LOGIN_SERVER }}
-      image_name: crczp-ansible-runner
+      image_name: cybergoatz-ansible-runner
       build_type: generic
     secrets: inherit
