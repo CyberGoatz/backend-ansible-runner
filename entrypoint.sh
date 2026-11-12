@@ -87,7 +87,7 @@ if $USER_CLEANUP; then
   python3 "$PREPARE_ANSWERS_PY" "$INVENTORY_FILE" "$ANSWERS_FILE" "$ANSWERS_STORAGE_API" --cleanup
 fi
 
-# Run from the repository root: from a subfolder git would only update submodules below it.
+# Always update from the repository root so all submodules are handled, also when -p moved us into a subfolder.
 git -C "$(git rev-parse --show-toplevel)" submodule update --init --recursive || exit 1
 cd provisioning || exit 1
 
