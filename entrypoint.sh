@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 
-usage() { echo "entrypoint.sh -r [git repo url] -i [inventory file path]"; }
+usage() { echo "entrypoint.sh -r [git repo url] -i [inventory file path] [-p [folder inside the repo]]"; }
 
 USER_CLEANUP=false
 
-while getopts ":u:r:i:a:hc" opt; do
+while getopts ":u:r:i:a:p:hc" opt; do
   case ${opt} in
   u) REPO_URL=$OPTARG ;;
   r) REVISION=$OPTARG ;;
   i) INVENTORY=$OPTARG ;; # realpath -e on some systems
   a) ANSWERS_STORAGE_API=$OPTARG ;;
+  p) REPO_PATH=$OPTARG ;;
   c) USER_CLEANUP=true ;;
   h)
     usage
@@ -65,6 +66,19 @@ fi
 ANSWERS_FILE=$(realpath 'answers.json')
 echo {} > "$ANSWERS_FILE"
 
+# Optional folder inside the repo that holds the training (variables.yml, provisioning/).
+if [ -n "$REPO_PATH" ]; then
+  if [[ "$REPO_PATH" == /* ]] || [[ "/$REPO_PATH/" == *"/../"* ]] || [[ ! "$REPO_PATH" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+    echo "Invalid path '$REPO_PATH': must be relative, without '..' and only contain [A-Za-z0-9._/-]. Exiting."
+    exit 1
+  fi
+  if [ ! -d "$REPO_PATH" ]; then
+    echo "Path '$REPO_PATH' does not exist in the repository. Exiting."
+    exit 1
+  fi
+  cd "$REPO_PATH" || exit 1
+fi
+
 VARIABLES_FILE='variables.yml'
 if [ -f $VARIABLES_FILE ]; then
   python3 "$PREPARE_ANSWERS_PY" "$INVENTORY_FILE" "$ANSWERS_FILE" "$ANSWERS_STORAGE_API" || exit 1
@@ -73,7 +87,8 @@ if $USER_CLEANUP; then
   python3 "$PREPARE_ANSWERS_PY" "$INVENTORY_FILE" "$ANSWERS_FILE" "$ANSWERS_STORAGE_API" --cleanup
 fi
 
-git submodule update --init --recursive || exit 1
+# Run from the repository root: from a subfolder git would only update submodules below it.
+git -C "$(git rev-parse --show-toplevel)" submodule update --init --recursive || exit 1
 cd provisioning || exit 1
 
 REQUIREMENTS_FILE="requirements.yml"
